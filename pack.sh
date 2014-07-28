@@ -9,10 +9,20 @@ if [ -e $nfw ]; then
     exit 1
 fi
 # repack cramfs
-if [ ! -e $dir/02cramfs.bak ]; then
-    mv $dir/02cramfs $dir/02cramfs.bak 2>/dev/null
+if [ -e $dir/02cramfs ]; then
+    if [ ! -e $dir/02cramfs.bak ]; then
+        mv $dir/02cramfs $dir/02cramfs.bak 2>/dev/null
+    fi
+    fakeroot -i $dir/.fakeroot mkcramfs $dir/root/ $dir/02cramfs
+elif [ -e $dir/02squashfs* ]; then
+    if [ ! -e $dir/02squashfs.bak ]; then
+        mv $dir/02squashfs $dir/02squashfs.bak 2>/dev/null
+    fi
+    rm $dir/02squashfs 2>/dev/null
+    fakeroot -i $dir/.fakeroot mksquashfs $dir/root/ $dir/02squashfs
+else
+    echo "Unknown root fs type"
 fi
-fakeroot -i $dir/.fakeroot mkcramfs $dir/root/ $dir/02cramfs
 # construct new firmware
 dd if=$dir/00header bs=1556 of=$nfw conv=notrunc 2>/dev/null
 # remove old header crc32
@@ -27,20 +37,20 @@ crc32 $dir/01kernel | perl -e 'print pack("l", oct("0x".<>));' | dd bs=1 seek=28
 # save fs offset
 perl -e 'print pack("l", 1556+(-s "'$dir/01kernel'"))' | dd bs=1 seek=288 count=4 of=$nfw conv=notrunc 2>/dev/null
 # save fs size
-if [ $(stat -c %s $dir/02cramfs) -lt 8388608 ]; then
+if [ $(stat -c %s $dir/02*fs) -lt 8388608 ]; then
     echo "WARN: size of filesystem is less than 0x800000. FW probably will not flash"
 fi
-if [ $(stat -c %s $dir/02cramfs) -ge 15728640 ]; then
+if [ $(stat -c %s $dir/02*fs) -ge 15728640 ]; then
     echo "WARN: size of filesystem is more than 0xF00000. FW probably will not flash"
 fi
-perl -e 'print pack("l", -s "'$dir/02cramfs'")' | dd bs=1 seek=292 count=4 of=$nfw conv=notrunc 2>/dev/null
+perl -e 'print pack("l", -s "'$dir/02*fs'")' | dd bs=1 seek=292 count=4 of=$nfw conv=notrunc 2>/dev/null
 # save fs crc32
-crc32 $dir/02cramfs | perl -e 'print pack("l", oct("0x".<>));' | dd bs=1 seek=552 count=4 of=$nfw conv=notrunc 2>/dev/null
+crc32 $dir/02*fs | perl -e 'print pack("l", oct("0x".<>));' | dd bs=1 seek=552 count=4 of=$nfw conv=notrunc 2>/dev/null
 # save full FW size
-perl -e 'print pack("l", 1556+(-s "'$dir/02cramfs'")+(-s "'$dir/01kernel'"))' | dd bs=1 seek=12 count=4 of=$nfw conv=notrunc 2>/dev/null
+perl -e 'print pack("l", 1556+(-s "'$dir/02*fs'")+(-s "'$dir/01kernel'"))' | dd bs=1 seek=12 count=4 of=$nfw conv=notrunc 2>/dev/null
 # Update header crc32
 crc32 $nfw | perl -e 'print pack("l", oct("0x".<>));' | dd bs=1 seek=8 count=4 of=$nfw conv=notrunc 2>/dev/null
 # concat rest
 cat $dir/01kernel >> $nfw
-cat $dir/02cramfs >> $nfw
+cat $dir/02*fs >> $nfw
 echo "Done"

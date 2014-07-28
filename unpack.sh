@@ -17,8 +17,13 @@ dd if=$1 of=$fw.unpack/01kernel bs=1 skip=1556 count=$ksize 2>/dev/null
 echo "Extract filesystem..."
 foff=$(dd if=$1 bs=1 count=4 skip=288 2>/dev/null | perl -e 'print unpack("l", <>);')
 dd if=$1 of=$fw.unpack/02cramfs bs=$foff skip=1 2>/dev/null
+file $fw.unpack/02cramfs | grep Squash >/dev/null && mv $fw.unpack/02cramfs $fw.unpack/02squashfs
 echo "Unpack filesystem..."
 cd $fw.unpack
-fakeroot -s .fakeroot cramfsck -x root 02cramfs
+if [ -f 02cramfs ]; then
+    fakeroot -s .fakeroot cramfsck -x root 02cramfs
+elif [ -f 02squashfs ]; then
+    fakeroot -s .fakeroot unsquashfs -d root 02squashfs
+fi
 chmod +r -R root/
 echo "Done"
