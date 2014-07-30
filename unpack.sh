@@ -11,9 +11,12 @@ fi
 mkdir -p $fw.unpack
 echo "Extract header..."
 dd if=$1 of=$fw.unpack/00header bs=1556 count=1 2>/dev/null
-echo "Extract kernel..."
-ksize=$(dd if=$1 bs=1 count=4 skip=24 2>/dev/null | perl -e 'print unpack("l", <>);')
-dd if=$1 of=$fw.unpack/01kernel bs=1 skip=1556 count=$ksize 2>/dev/null
+blocks=$(dd if=$1 bs=1 count=4 skip=16 2>/dev/null | perl -e 'print unpack("l", <>);')
+if [ $blocks -eq 3 ]; then
+    echo "Extract kernel..."
+    ksize=$(dd if=$1 bs=1 count=4 skip=24 2>/dev/null | perl -e 'print unpack("l", <>);')
+    dd if=$1 of=$fw.unpack/01kernel bs=1 skip=1556 count=$ksize 2>/dev/null
+fi
 echo "Extract filesystem..."
 foff=$(dd if=$1 bs=1 count=4 skip=288 2>/dev/null | perl -e 'print unpack("l", <>);')
 dd if=$1 of=$fw.unpack/02cramfs bs=$foff skip=1 2>/dev/null
