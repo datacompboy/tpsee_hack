@@ -43,11 +43,11 @@ fi
 if [ $(stat -c %s $dir/02*fs) -ge 15728640 ]; then
     echo "WARN: size of filesystem is more than 0xF00000. FW probably will not flash"
 fi
-perl -e 'print pack("l", -s "'$dir/02*fs'")' | dd bs=1 seek=292 count=4 of=$nfw conv=notrunc 2>/dev/null
+perl -e 'print pack("l", -s "'$(echo -n $dir/02*fs)'")' | dd bs=1 seek=292 count=4 of=$nfw conv=notrunc 2>/dev/null
 # save fs crc32
 crc32 $dir/02*fs | perl -e 'print pack("l", oct("0x".<>));' | dd bs=1 seek=552 count=4 of=$nfw conv=notrunc 2>/dev/null
 # save full FW size
-perl -e 'print pack("l", 1556+(-s "'$dir/02*fs'")+(-s "'$dir/01kernel'"))' | dd bs=1 seek=12 count=4 of=$nfw conv=notrunc 2>/dev/null
+perl -e 'print pack("l", 1556+(-s "'$(echo -n $dir/02*fs)'")+(-s "'$dir/01kernel'"))' | dd bs=1 seek=12 count=4 of=$nfw conv=notrunc 2>/dev/null
 # Update header crc32
 crc32 $nfw | perl -e 'print pack("l", oct("0x".<>));' | dd bs=1 seek=8 count=4 of=$nfw conv=notrunc 2>/dev/null
 # concat rest
