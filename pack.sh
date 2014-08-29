@@ -19,7 +19,7 @@ elif [ -e $dir/02squashfs -o -e $dir/02squashfs.bak ]; then
         mv $dir/02squashfs $dir/02squashfs.bak 2>/dev/null
     fi
     rm $dir/02squashfs 2>/dev/null
-    fakeroot -i $dir/.fakeroot mksquashfs $dir/root/ $dir/02squashfs
+    fakeroot -i $dir/.fakeroot mksquashfs $dir/root/ $dir/02squashfs -no-xattrs -all-root -comp xz
 else
     echo "Unknown root fs type"
 fi
